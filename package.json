@@ -1,0 +1,8 @@
+{
+  "name": "okeconnect-workers",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "wrangler dev", "deploy": "wrangler deploy", "db:create": "wrangler d1 create okeconnect-db", "db:migrate": "wrangler d1 migrations apply okeconnect-db --remote" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}
