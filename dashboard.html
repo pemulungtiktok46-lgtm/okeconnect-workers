@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080d18">
+  <title>OkeConnect Operations</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#080d18;color:#e7edf7}
+    *{box-sizing:border-box}body{margin:0;padding:clamp(14px,3vw,28px);max-width:1120px;margin-inline:auto}
+    h1{font-size:clamp(22px,4vw,30px);margin:0 0 5px}.muted{color:#91a0b7;font-size:14px;line-height:1.55}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+    .connect{width:min(100%,440px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+    input,button{font:inherit;min-height:46px;border-radius:11px}input{width:100%;min-width:0;padding:0 13px;border:1px solid #33445e;background:#101a2b;color:#fff;outline:none}input:focus{border-color:#5b91ff;box-shadow:0 0 0 3px #2563eb28}
+    button{border:0;background:#2864dc;color:#fff;font-weight:700;padding:0 17px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+    .hint{grid-column:1/-1;margin:0}.status{grid-column:1/-1;min-height:20px;font-size:13px;color:#fbbf24}.status.ok{color:#4ade80}.status.bad{color:#fca5a5}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}.card{background:#101a2b;border:1px solid #22324a;border-radius:15px;padding:16px;min-width:0}.num{font-size:clamp(24px,4vw,30px);font-weight:750;margin-top:6px;font-variant-numeric:tabular-nums}
+    h2{font-size:18px;margin:0 0 12px}.table{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #24334a;font-size:13px;white-space:nowrap}th{color:#aab8cd;font-weight:650}.pill{padding:4px 8px;border-radius:20px;background:#25344a;font-size:12px}
+    .foot{margin-top:12px}.empty{color:#91a0b7;text-align:center;padding:22px}
+    @media(max-width:640px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.connect{grid-template-columns:1fr}.connect button{width:100%}.hint,.status{grid-column:1}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>OkeConnect Operations</h1>
+      <div class="muted">Dashboard pemantauan internal · hanya untuk admin</div>
+    </div>
+    <form class="connect" id="connectForm">
+      <input id="token" type="password" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Tempel token Bot Telegram dari @BotFather" aria-label="Token Bot Telegram" required>
+      <button id="connectButton" type="submit">Hubungkan Bot</button>
+      <p class="muted hint">Tempel token bot Telegram yang bentuknya seperti <b>123456789:AA...</b>. Bukan username bot dan bukan PIN OkeConnect.</p>
+      <div id="message" class="status" role="status" aria-live="polite">Token tidak disimpan di browser. Masukkan token lalu tekan Hubungkan Bot.</div>
+    </form>
+  </header>
+
+  <section class="grid" aria-label="Ringkasan operasional">
+    <div class="card">Member<div class="num" id="members">—</div></div>
+    <div class="card">Transaksi<div class="num" id="transactions">—</div></div>
+    <div class="card">Perlu dipantau<div class="num" id="pending">—</div></div>
+    <div class="card">Deposit menunggu<div class="num" id="deposits_pending">—</div></div>
+  </section>
+
+  <section class="card">
+    <h2>Transaksi terbaru</h2>
+    <div class="table">
+      <table>
+        <thead><tr><th>Referensi</th><th>Produk</th><th>Tujuan</th><th>Harga</th><th>Status</th><th>Waktu</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">Hubungkan bot Telegram untuk memuat data.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <p class="muted foot">Catatan keamanan: jangan bagikan token bot kepada orang lain. Token ini memberi akses untuk mengendalikan bot Telegram.</p>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const form = $('connectForm');
+const button = $('connectButton');
+const message = $('message');
+let activeToken = '';
+
+function showMessage(text, type='') {
+  message.textContent = text;
+  message.className = 'status' + (type ? ' ' + type : '');
+}
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+async function readJson(response) {
+  const raw = await response.text();
+  let data;
+  try { data = JSON.parse(raw); }
+  catch { throw new Error(response.status === 404
+    ? 'Alamat API tidak ditemukan. Server PHP belum dipasang atau domain ini hanya menayangkan halaman HTML.'
+    : 'Server memberi jawaban yang tidak bisa dibaca. Periksa pemasangan backend.'); }
+  if (!response.ok || data.ok === false) throw new Error(data.message || data.error || 'Permintaan gagal.');
+  return data;
+}
+async function fetchDashboard(token) {
+  const headers = {'X-Telegram-Bot-Token': token};
+  const [summaryResponse, transactionsResponse] = await Promise.all([
+    fetch('/api/summary', {headers, cache:'no-store'}),
+    fetch('/api/transactions', {headers, cache:'no-store'})
+  ]);
+  const summary = await readJson(summaryResponse);
+  const transactions = await readJson(transactionsResponse);
+  for (const key of ['members','transactions','pending','deposits_pending']) {
+    if ($(key)) $(key).textContent = Number(summary[key] ?? 0).toLocaleString('id-ID');
+  }
+  $('rows').innerHTML = transactions.length ? transactions.map(row => `
+    <tr>
+      <td>${escapeHtml(row.reference_id)}</td><td>${escapeHtml(row.product_code)}</td>
+      <td>${escapeHtml(row.destination)}</td>
+      <td>Rp${Number(row.selling_price || 0).toLocaleString('id-ID')}</td>
+      <td><span class="pill">${escapeHtml(row.status)}</span></td>
+      <td>${escapeHtml(row.created_at)}</td>
+    </tr>`).join('') : '<tr><td colspan="6" class="empty">Belum ada transaksi.</td></tr>';
+}
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const token = $('token').value.trim();
+  if (!/^\d+:[A-Za-z0-9_-]{20,}$/.test(token)) {
+    showMessage('Format token belum benar. Salin token lengkap dari chat @BotFather.', 'bad');
+    return;
+  }
+  button.disabled = true;
+  button.textContent = 'Memeriksa...';
+  showMessage('Sedang memeriksa token ke server Telegram...');
+  try {
+    const response = await fetch('/api/telegram/connect', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token}), cache:'no-store'
+    });
+    const result = await readJson(response);
+    activeToken = token;
+    showMessage(`Bot berhasil terhubung: @${result.bot.username || result.bot.first_name}. Memuat data dashboard...`, 'ok');
+    await fetchDashboard(activeToken);
+    showMessage(`Berhasil terhubung ke @${result.bot.username || result.bot.first_name}. Data dashboard sudah dimuat.`, 'ok');
+  } catch (error) {
+    activeToken = '';
+    showMessage(error.message || 'Tidak bisa menghubungkan bot. Periksa server.', 'bad');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Hubungkan Bot';
+  }
+});
+</script>
+</body>
+</html>

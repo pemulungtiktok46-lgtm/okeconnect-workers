@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    env_file: .env
+    ports: ["8080:8080"]
+    volumes: ["./storage:/app/storage", "./logs:/app/logs"]
+    restart: unless-stopped
+    command: php -S 0.0.0.0:8080 -t public public/router.php
+  bot:
+    build: .
+    env_file: .env
+    volumes: ["./storage:/app/storage", "./logs:/app/logs"]
+    restart: unless-stopped
+    command: php src/bot.php

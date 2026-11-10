@@ -1,0 +1,19 @@
+{
+  "name": "internal/okeconnect-hybrid-bot",
+  "description": "Internal Telegram operator bot and OkeConnect integration",
+  "type": "project",
+  "require": {
+    "php": ">=8.2",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-curl": "*",
+    "vlucas/phpdotenv": "^5.6",
+    "ndradev/okeconnect-php-client": "^4.0",
+    "ext-pdo_sqlite": "*",
+    "ext-openssl": "*"
+  },
+  "scripts": {
+    "serve": "php -S 0.0.0.0:8080 -t public public/router.php",
+    "bot": "php src/bot.php"
+  }
+}

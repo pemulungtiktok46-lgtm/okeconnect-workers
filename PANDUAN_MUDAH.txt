@@ -1,0 +1,40 @@
+PANDUAN MUDAH — HUBUNGKAN TOKEN BOT TELEGRAM
+
+1. Token Telegram diambil dari BotFather.
+   - Buka Telegram.
+   - Cari akun resmi @BotFather.
+   - Buka bot Anda, lalu pilih /token (atau buat bot baru dengan /newbot).
+   - Salin token yang diberikan BotFather sampai lengkap.
+   - Jangan bagikan token ini kepada siapa pun.
+
+2. Buka halaman dashboard pada server backend yang sudah aktif.
+   - Tempel token BotFather ke kolom "Tempel token Bot Telegram dari @BotFather".
+   - Tekan tombol "Hubungkan Bot".
+   - Dashboard akan meminta server mengecek token ke Telegram.
+   - Kalau benar, nama bot akan muncul dan data ringkasan akan dimuat.
+
+3. Siapkan server PHP.
+   Proyek ini memakai PHP 8.2+, Composer, cURL, PDO SQLite, dan OpenSSL.
+   Jalankan `composer install`, lalu salin `.env.example` menjadi `.env`.
+   Isi APP_SECRET dengan kode acak minimal 32 karakter (disarankan 64 karakter). Jangan mengganti APP_SECRET setelah token tersimpan; bila terpaksa menggantinya, hubungkan ulang token bot.
+   Isi juga TELEGRAM_ADMIN_IDS dan TELEGRAM_OPERATOR_IDS dengan angka ID Telegram.
+   Kredensial OkeConnect (OKE_MEMBER_ID, OKE_PIN, OKE_PASSWORD) tetap di .env.
+   Token bot boleh dikosongkan di .env jika akan ditempel lewat dashboard.
+
+4. Jalankan web dan bot.
+   `composer serve` untuk halaman/API.
+   `composer bot` untuk menjalankan worker bot Telegram.
+   Keduanya harus hidup terus dan memakai database storage/app.sqlite yang sama.
+   Docker Compose juga sudah memakai router API yang benar.
+
+PENTING UNTUK DOMAIN EDGEONE:
+Domain *.edgeone.dev pada EdgeOne Pages tidak otomatis menjalankan file PHP ini.
+Backend ZIP ini harus dijalankan di server yang mendukung PHP dan worker yang terus aktif.
+Dokumentasi EdgeOne Pages menyebut Cloud Functions Node.js, Python, dan Go; bukan PHP.
+Kalau dashboard masih berada di EdgeOne sebagai halaman HTML statis, tombol Hubungkan
+akan gagal sampai backend PHP dipasang di server yang sesuai dan domain/API diarahkan ke sana.
+
+BEDAKAN TOKEN:
+- Token Bot Telegram: diambil dari @BotFather, ditempel di dashboard.
+- ID admin/operator Telegram: angka ID akun Telegram, disimpan di .env.
+- OkeConnect Member ID, PIN, Password: disimpan di .env, bukan ditempel ke token Telegram.
